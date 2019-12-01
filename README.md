@@ -39,8 +39,7 @@ docker build -t gitlab-ci-overdue .
 Usage:
 
 ```sh
-docker run -it --rm -e GITLAB_PRIVATE_TOKEN=<token> \
-    gitlab-ci-overdue [<options>]
+docker run --rm -e GITLAB_PRIVATE_TOKEN=<token> gitlab-ci-overdue [<options>]
 ```
 
 To change the GitLab URL, add `-e GITLAB_URL=<url>` option.
