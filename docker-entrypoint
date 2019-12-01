@@ -1,0 +1,20 @@
+#!/usr/bin/env sh
+set -eu -o pipefail
+
+cat <<EOF >"${GITLAB_CFG:-/etc/python-gitlab.cfg}"
+[global]
+default = gitlab
+timeout = ${GITLAB_TIMEOUT:-5}
+api_version = 4
+per_page = ${GITLAB_PER_PAGE:-20}
+
+[gitlab]
+url = ${GITLAB_URL:-https://gitlab.com}
+private_token = ${GITLAB_PRIVATE_TOKEN:-}
+oauth_token = ${GITLAB_OAUTH_TOKEN:-}
+job_token = ${GITLAB_JOB_TOKEN:-}
+http_username = ${GITLAB_HTTP_USERNAME:-}
+http_password = ${GITLAB_HTTP_PASSWORD:-}
+EOF
+
+exec gitlab-ci-overdue --config "${GITLAB_CFG:-/etc/python-gitlab.cfg}" "$@"
