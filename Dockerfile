@@ -1,5 +1,9 @@
 FROM python:3-alpine
-RUN pip install python-gitlab
+
+WORKDIR /usr/src/gitlab-ci-overdue
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY gitlab-ci-overdue docker-entrypoint /usr/local/bin/
 
