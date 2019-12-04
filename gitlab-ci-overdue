@@ -4,11 +4,11 @@ import argparse
 from datetime import datetime, timedelta
 import sys
 from typing import Any, List
-import urllib
+from urllib.parse import quote_plus, unquote_plus
 
 import gitlab  # type: ignore
 
-__version__ = '0.1.0'
+__version__ = '0.2.0'
 
 
 def parse_opts(argv):
@@ -19,15 +19,17 @@ https://python-gitlab.readthedocs.io/en/stable/cli.html#cli-configuration
 for information about configuration file.
         """)
     p.add_argument('project_id', help='project ID or namespace/project_path',
-                   type=urllib.parse.quote_plus)
-    p.add_argument('-c', '--config', metavar='PATH', help='configuration file')
+                   type=quote_plus)
     default_duration = 30
     p.add_argument('--allowed-duration', metavar='MINUTES', type=int,
                    default=default_duration,
                    help='how long a pipeline is allowed to run;'
                    f' default is {default_duration} minutes')
+    p.add_argument('-c', '--config', metavar='PATH', help='configuration file')
     p.add_argument('-n', '--dry-run', help="don't actually cancel anything,"
                    ' just show what would be done', action='store_true')
+    p.add_argument('--forks', action='store_true',
+                   help='include forked projects')
     p.add_argument('-V', '--version', action='version',
                    version='%(prog)s ' + __version__)
     return p.parse_args(argv)
@@ -57,15 +59,6 @@ def overdue_pipelines(project, allowed_duration: int) -> List[Any]:
     return res
 
 
-def cancel_pipeline(pipeline, dry_run: bool) -> None:
-    pid: int = pipeline.attributes['id']
-    if dry_run:
-        print(f'Would cancel pipeline {pid}')
-    else:
-        print(f'Cancelling pipeline {pid}')
-        pipeline.cancel()
-
-
 def main(argv=None):
     opts = parse_opts(argv)
     kwargs = {'config_files': [opts.config]} if opts.config else {}
@@ -76,9 +69,24 @@ def main(argv=None):
         return 1
     gl.auth()
 
-    project = gl.projects.get(opts.project_id, lazy=True)
-    for pipeline in overdue_pipelines(project, opts.allowed_duration):
-        cancel_pipeline(pipeline, opts.dry_run)
+    projects = [gl.projects.get(opts.project_id, lazy=True)]
+    if opts.forks:
+        for pid in projects[0].forks.list(as_list=False):
+            projects.append(gl.projects.get(
+                pid.attributes['path_with_namespace'],
+                lazy=True))
+
+    for i, project in enumerate(projects):
+        for pipeline in overdue_pipelines(project, opts.allowed_duration):
+            attrs = pipeline.attributes
+            label = str(attrs['id'])
+            if i > 0:
+                label += ' ({})'.format(unquote_plus(attrs['project_id']))
+            if opts.dry_run:
+                print(f'Would cancel pipeline {label}')
+            else:
+                print(f'Cancelling pipeline {label}')
+                pipeline.cancel()
     return 0
 
 
