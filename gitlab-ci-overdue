@@ -8,7 +8,7 @@ from urllib.parse import quote_plus, unquote_plus
 
 import gitlab  # type: ignore
 
-__version__ = '0.2.0'
+__version__ = '0.2.1'
 
 
 def parse_opts(argv):
@@ -86,7 +86,10 @@ def main(argv=None):
                 print(f'Would cancel pipeline {label}')
             else:
                 print(f'Cancelling pipeline {label}')
-                pipeline.cancel()
+                try:
+                    pipeline.cancel()
+                except gitlab.exceptions.GitlabPipelineCancelError as err:
+                    print(err, file=sys.stderr)
     return 0
 
 
